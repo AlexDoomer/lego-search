@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Поиск деталей Lego по артикулу</title>
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=w1Vs0f2vp6fJYiCkFUFYDpwSExwSFr2cD0buyzAjnJZ6zouhub26irjs5PLWmEZL-FbJET8bmWk4adimb-yQ9xC6Tj8ZKRh-9CappBtORWC5I2wHLuMOSldOiiUqPBzX_gPRT_OXOFK6_wn9M6CcE5Z8qKQXztHP0av0J5E7Oed0SY8Bt1WMWd4WkRYWZ33ppwroheSwtmhkAFW65V-wRvDz_xZsfMLO8CHHCkByP8xI6hyNanlu1HWsinmuBLcOKzpjF1hnj6Ov5itPp-_z8VcU3Lvfk-HUYUXVdSuGk3Sq6RGAHUNovtmvWXQoe7G_DEDrrudUzjBnp8thHYNospZvITJ-5EjM3YCvnr4jYcE7bej5VggbzhHAiUk_d63BILhwHKRHmBLlk9EGmB0qxM4B4LvjlJRA27iZ0q3lNukFUpTpro8hQoUbJ5aPd6qcmRzKP1MQFCye-zjwcos9I-0yY7i9o-cgNkt2Qrk4SjB3tyhK7y2hrlC6KD-hwGD9W_VSJjRB5P8zN4zAlf9hEpjsc98joLEiNvx44_C2vOgsyRUofPwUZw804eBgaUbzBNEcWWBZBrwKRlMEomJSe0JDESWGBes22I-ru7eUZ_IJ3sXyfugT3v8eX2Ko1H5-0Od-QRW3BVAt07uV2OWxPvGC0FW8qA9OzLLXrXRgPc_4hA1ranX2q9NLF3F6rtBuW9_JVgxtcp451yz5TvuhLEId4TQRwUPwILC7NH11KX3KtWqxia6hnMt8HW5Ak61zwOfIyILP86YrKS7qFG96J79cpU1E9HOs7NgPqCW0psVjMQNYwfpqAGACLGQVQc0Odn9fRj89BukxAAGAr7Kj-0aypdV3qEynuxHKD5PYSjo" charset="UTF-8"></script>
     <style>
+        /* Ваши существующие стили остаются без изменений */
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -67,7 +67,7 @@
 </head>
 <body>
     <h1>🔍 Поиск деталей Lego по артикулу</h1>
-    <input type="text" id="search" placeholder="Введите артикул (например: 3626pb0527)" autofocus>
+    <input type="text" id="search" placeholder="Введите артикул (например: 999)" autofocus>
     <div id="results"></div>
 
     <script>
@@ -85,20 +85,15 @@
             }
         }
 
-        // ФИКСИРОВАННАЯ ФУНКЦИЯ: Формирование правильной ссылки на Яндекс.Диск
+        // НОВАЯ ФУНКЦИЯ: Формирование ссылки в формате Яндекс.Диска
         function getYandexLink(path) {
-            // Разделяем путь на части
-            const pathParts = path.split('/');
+            // Кодируем каждый компонент пути отдельно
+            const encodedPath = path.split('/')
+                .map(part => encodeURIComponent(part))
+                .join('/');
             
-            // Извлекаем имя целевой папки (последний элемент)
-            const targetFolder = pathParts.pop();
-            
-            // Кодируем компоненты пути
-            const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('%2F');
-            const encodedFolder = encodeURIComponent(targetFolder);
-            
-            // Формируем ссылку НАПРЯМУЮ на нужную папку
-            return `https://disk.yandex.ru/d/${PUBLIC_FOLDER_ID}?path=%2F${encodedPath}%2F${encodedFolder}`;
+            // Формируем ссылку в формате Яндекс.Диска
+            return `https://disk.yandex.ru/d/${PUBLIC_FOLDER_ID}/${encodedPath}`;
         }
 
         // Поиск и отображение результатов
@@ -134,30 +129,24 @@
             } else {
                 resultsDiv.innerHTML = `
                     <div class="no-results">
-                        Артикул "${query}" не найден. Проверьте:
-                        <ul>
-                            <li>Нет ли опечаток</li>
-                            <li>Содержит ли артикул только цифры и латинские буквы</li>
-                            <li>Не содержит ли артикул запрещённых символов (_, -, пробелы)</li>
-                        </ul>
+                        Артикул "${query}" не найден.
                     </div>
                 `;
             }
         }
 
-        // Обработка ввода с задержкой
+        // Обработка ввода
         let searchTimeout;
         document.getElementById('search').addEventListener('input', () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(search, 300);
         });
 
-        // Поиск при нажатии Enter
         document.getElementById('search').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') search();
         });
 
-        // Первый поиск при загрузке
+        // Инициализация
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const articul = urlParams.get('articul');
