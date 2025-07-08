@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Поиск деталей Lego по артикулу</title>
+    <title>Поиск деталей Lego</title>
     <style>
-        /* Ваши существующие стили остаются без изменений */
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -24,6 +23,7 @@
             border: 2px solid #3498db;
             border-radius: 4px;
             box-sizing: border-box;
+            margin-top: 10px;
         }
         #results {
             margin-top: 20px;
@@ -63,10 +63,35 @@
             border-radius: 3px;
             font-weight: bold;
         }
+        .search-type {
+            display: flex;
+            margin-bottom: 10px;
+            gap: 15px;
+        }
+        .search-type label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        .results-count {
+            margin-bottom: 10px;
+            color: #7f8c8d;
+        }
     </style>
 </head>
 <body>
-    <h1>🔍 Поиск деталей Lego по артикулу</h1>
+    <h1>🔍 Поиск деталей Lego</h1>
+    
+    <div class="search-type">
+        <label>
+            <input type="radio" name="searchType" value="articul" checked> По артикулу
+        </label>
+        <label>
+            <input type="radio" name="searchType" value="name"> По названию
+        </label>
+    </div>
+    
     <input type="text" id="search" placeholder="Введите артикул (например: 999)" autofocus>
     <div id="results"></div>
 
@@ -85,18 +110,103 @@
             }
         }
 
-        // НОВАЯ ФУНКЦИЯ: Формирование ссылки в формате Яндекс.Диска
+        // Функция формирования ссылки
         function getYandexLink(path) {
-            // Кодируем каждый компонент пути отдельно
             const encodedPath = path.split('/')
                 .map(part => encodeURIComponent(part))
                 .join('/');
-            
-            // Формируем ссылку в формате Яндекс.Диска
             return `https://disk.yandex.ru/d/${PUBLIC_FOLDER_ID}/${encodedPath}`;
         }
 
-        // Поиск и отображение результатов
+        // Функция для склонения слов
+        function getRussianPlural(number, titles) {
+            const cases = [2, 0, 1, 1, 1, 2];
+            return titles[
+                number % 100 > 4 && number % 100 < 20 
+                    ? 2 
+                    : cases[Math.min(number % 10, 5)]
+            ];
+        }
+
+        // Поиск по названиям папок (исправленная версия)
+        async function searchByName(query) {
+            const index = await loadIndex();
+            const results = [];
+            const queryLower = query.toLowerCase();
+            const addedPaths = new Set();
+            
+            // Собираем все уникальные пути из индекса
+            for (const articul in index) {
+                for (const item of index[articul]) {
+                    // Разбиваем путь на компоненты
+                    const pathParts = item.path.split('/');
+                    
+                    // Проверяем каждую папку в пути
+                    for (let i = 0; i < pathParts.length; i++) {
+                        const currentFolder = pathParts[i];
+                        if (currentFolder.toLowerCase().includes(queryLower)) {
+                            const fullPath = pathParts.slice(0, i+1).join('/');
+                            
+                            // Добавляем только если ещё не добавлено
+                            if (!addedPaths.has(fullPath)) {
+                                addedPaths.add(fullPath);
+                                results.push({
+                                    path: fullPath,
+                                    name: currentFolder,
+                                    fullName: item.name
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return results;
+        }
+
+        // Отображение результатов
+        function displayResults(results, query) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            if (results.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="no-results">
+                        По запросу "${query}" ничего не найдено.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Сортировка результатов по пути
+            results.sort((a, b) => a.path.localeCompare(b.path));
+            
+            let html = `
+                <div class="results-count">
+                    Найдено: ${results.length} ${getRussianPlural(results.length, ['результат', 'результата', 'результатов'])}
+                </div>
+            `;
+            
+            results.forEach(item => {
+                const yandexLink = getYandexLink(item.path);
+                const highlightedName = item.name.replace(
+                    new RegExp(query, 'gi'), 
+                    match => `<span class="articul-highlight">${match}</span>`
+                );
+                
+                html += `
+                    <div class="item">
+                        <h3>${highlightedName}</h3>
+                        <p>Путь: ${item.path.replace(/\//g, ' / ')}</p>
+                        <a href="${yandexLink}" target="_blank">Открыть папку</a>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        // Основная функция поиска
         async function search() {
             const query = document.getElementById('search').value.trim();
             if (!query) {
@@ -104,38 +214,20 @@
                 return;
             }
 
-            const index = await loadIndex();
-            const results = index[query] || [];
-            const resultsDiv = document.getElementById('results');
-
-            if (results.length > 0) {
-                let html = '';
-                results.forEach(entry => {
-                    // Подсветка артикула в названии
-                    const highlightedName = entry.name.replace(
-                        new RegExp(query, 'gi'), 
-                        match => `<span class="articul-highlight">${match}</span>`
-                    );
-
-                    html += `
-                        <div class="item">
-                            <h3>${highlightedName}</h3>
-                            <p>Путь: ${entry.path.replace(/\//g, ' / ')}</p>
-                            <a href="${getYandexLink(entry.path)}" target="_blank">Открыть папку на Яндекс.Диске</a>
-                        </div>
-                    `;
-                });
-                resultsDiv.innerHTML = html;
+            const searchType = document.querySelector('input[name="searchType"]:checked').value;
+            let results = [];
+            
+            if (searchType === 'articul') {
+                const index = await loadIndex();
+                results = index[query] || [];
             } else {
-                resultsDiv.innerHTML = `
-                    <div class="no-results">
-                        Артикул "${query}" не найден.
-                    </div>
-                `;
+                results = await searchByName(query);
             }
+
+            displayResults(results, query);
         }
 
-        // Обработка ввода
+        // Обработчики событий
         let searchTimeout;
         document.getElementById('search').addEventListener('input', () => {
             clearTimeout(searchTimeout);
@@ -144,6 +236,17 @@
 
         document.getElementById('search').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') search();
+        });
+
+        // Переключатель типа поиска
+        document.querySelectorAll('input[name="searchType"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const placeholder = radio.value === 'articul' 
+                    ? "Введите артикул (например: 999)" 
+                    : "Введите название детали";
+                document.getElementById('search').placeholder = placeholder;
+                document.getElementById('search').focus();
+            });
         });
 
         // Инициализация
