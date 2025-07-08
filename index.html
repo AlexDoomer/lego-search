@@ -3,156 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Поиск деталей Lego по артикулу</title>
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=w1Vs0f2vp6fJYiCkFUFYDpwSExwSFr2cD0buyzAjnJZ6zouhub26irjs5PLWmEZL-FbJET8bmWk4adimb-yQ9xC6Tj8ZKRh-9CappBtORWC5I2wHLuMOSldOiiUqPBzX_gPRT_OXOFK6_wn9M6CcE5Z8qKQXztHP0av0J5E7Oed0SY8Bt1WMWd4WkRYWZ33ppwroheSwtmhkAFW65V-wRvDz_xZsfMLO8CHHCkByP8xI6hyNanlu1HWsinmuBLcOKzpjF1hnj6Ov5itPp-_z8VcU3Lvfk-HUYUXVdSuGk3Sq6RGAHUNovtmvWXQoe7G_DEDrrudUzjBnp8thHYNospZvITJ-5EjM3YCvnr4jYcE7bej5VggbzhHAiUk_d63BILhwHKRHmBLlk9EGmB0qxM4B4LvjlJRA27iZ0q3lNukFUpTpro8hQoUbJ5aPd6qcmRzKP1MQFCye-zjwcos9I-0yY7i9o-cgNkt2Qrk4SjB3tyhK7y2hrlC6KD-hwGD9W_VSJjRB5P8zN4zAlf9hEpjsc98joLEiNvx44_C2vOgsyRUofPwUZw804eBgaUbzBNEcWWBZBrwKRlMEomJSe0JDESWGBes22I-ru7eUZ_IJ3sXyfugT3v8eX2Ko1H5-0Od-QRW3BVAt07uV2OWxPvGC0FW8qA9OzLLXrXRgPc_4hA1ranX2q9NLF3F6rtBuW9_JVgxtcp451yz5TvuhLEId4TQRwUPwILC7NH11KX3KtWqxia6hnMt8HW5Ak61zwOfIyILP86YrKS7qFG96J79cpU1E9HOs7NgPqCW0psVjMQNYwfpqAGACLGQVQc0Odn9fRj89BukxAAGAr7Kj-0aypdV3qEynuxHKD5PYSjo" charset="UTF-8"></script><style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        h1 {
-            color: #e74c3c;
-            text-align: center;
-        }
-        #search {
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border: 2px solid #3498db;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        #results {
+    <title>Поиск деталей Lego</title>
+    <style>
+        /* ... ваш существующий CSS ... */
+        .debug-info {
+            font-size: 12px;
+            color: #666;
             margin-top: 20px;
-        }
-        .item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            transition: background-color 0.3s;
-        }
-        .item:hover {
-            background-color: #f9f9f9;
-        }
-        .item h3 {
-            margin-top: 0;
-            color: #2c3e50;
-        }
-        .item a {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 8px 15px;
-            background-color: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        .item a:hover {
-            background-color: #2980b9;
-        }
-        .no-results {
-            color: #7f8c8d;
-            text-align: center;
-            padding: 20px;
-        }
-        .articul-highlight {
-            background-color: #fffde7;
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-weight: bold;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>🔍 Поиск деталей Lego по артикулу</h1>
-    <input type="text" id="search" placeholder="Введите артикул (например: 3626pb0527)" autofocus>
-    <div id="results"></div>
+    <!-- ... ваша HTML-разметка ... -->
+    <div class="debug-info" id="debug"></div>
 
     <script>
-        // Конфигурация (замените YOUR_FOLDER_ID на реальный ID папки Яндекс.Диска)
-        const PUBLIC_FOLDER_ID = "Wj1vKh7Xc0zUVA";
+        // 1. КОНФИГУРАЦИЯ
+        const PUBLIC_FOLDER_ID = "YOUR_FOLDER_ID"; // ЗАМЕНИТЕ НА РЕАЛЬНЫЙ ID!
+        const DEBUG_MODE = true; // Переключить на false после отладки
+
+        // 2. ЭЛЕМЕНТЫ ДЛЯ ОТЛАДКИ
+        const debugEl = document.getElementById('debug');
         
-        // Загрузка индекса
+        function logDebug(message) {
+            if (DEBUG_MODE) {
+                debugEl.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+            }
+        }
+
+        // 3. ЗАГРУЗКА ИНДЕКСА С ОБРАБОТКОЙ CORS
         async function loadIndex() {
+            logDebug("Начало загрузки индекса...");
             try {
                 const response = await fetch('lego_index.json');
-                return await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                logDebug(`Индекс загружен успешно! Записей: ${Object.keys(data).length}`);
+                return data;
             } catch (error) {
-                console.error("Ошибка загрузки индекса:", error);
+                logDebug(`ОШИБКА загрузки индекса: ${error.message}`);
+                showError(`Ошибка загрузки базы данных. Попробуйте позже.`);
                 return {};
             }
         }
 
-        // Формирование ссылки на Яндекс.Диск
-        function getYandexLink(path) {
-            return `https://disk.yandex.ru/d/${Wj1vKh7Xc0zUVA}?path=%2F${encodeURIComponent(path)}`;
-        }
-
-        // Поиск и отображение результатов
+        // 4. ОБНОВЛЕННАЯ ФУНКЦИЯ ПОИСКА
         async function search() {
             const query = document.getElementById('search').value.trim();
+            logDebug(`Поиск артикула: "${query}"`);
+            
             if (!query) {
-                document.getElementById('results').innerHTML = '';
+                clearResults();
                 return;
             }
 
-            const index = await loadIndex();
-            const results = index[query] || [];
-            const resultsDiv = document.getElementById('results');
-
-            if (results.length > 0) {
-                let html = '';
-                results.forEach(entry => {
-                    // Подсветка артикула в названии
-                    const highlightedName = entry.name.replace(
-                        new RegExp(query, 'gi'), 
-                        match => `<span class="articul-highlight">${match}</span>`
-                    );
-
-                    html += `
-                        <div class="item">
-                            <h3>${highlightedName}</h3>
-                            <p>Путь: ${entry.path.replace(/\//g, ' / ')}</p>
-                            <a href="${getYandexLink(entry.path)}" target="_blank">Открыть папку на Яндекс.Диске</a>
-                        </div>
-                    `;
-                });
-                resultsDiv.innerHTML = html;
-            } else {
-                resultsDiv.innerHTML = `
-                    <div class="no-results">
-                        Артикул "${query}" не найден. Проверьте:
-                        <ul>
-                            <li>Нет ли опечаток</li>
-                            <li>Содержит ли артикул только цифры и латинские буквы</li>
-                            <li>Не содержит ли артикул запрещённых символов (_, -, пробелы)</li>
-                        </ul>
-                    </div>
-                `;
+            try {
+                const index = await loadIndex();
+                const results = index[query] || [];
+                
+                if (results.length > 0) {
+                    logDebug(`Найдено результатов: ${results.length}`);
+                    displayResults(results, query);
+                } else {
+                    logDebug("Артикул не найден в индексе");
+                    showNoResults(query);
+                }
+            } catch (error) {
+                logDebug(`ОШИБКА поиска: ${error.message}`);
+                showError("Ошибка при выполнении поиска");
             }
         }
 
-        // Обработка ввода с задержкой (чтобы не нагружать при быстром наборе)
-        let searchTimeout;
-        document.getElementById('search').addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(search, 300);
-        });
+        // 5. ФУНКЦИЯ ОТОБРАЖЕНИЯ РЕЗУЛЬТАТОВ
+        function displayResults(results, query) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            results.forEach(entry => {
+                const yandexLink = getYandexLink(entry.path);
+                logDebug(`Формирование ссылки: ${yandexLink}`);
+                
+                const resultElement = document.createElement('div');
+                resultElement.className = 'item';
+                resultElement.innerHTML = `
+                    <h3>${highlightQuery(entry.name, query)}</h3>
+                    <p>Путь: ${entry.path}</p>
+                    <a href="${yandexLink}" target="_blank">Открыть папку</a>
+                `;
+                
+                // Добавляем обработчик для проверки ссылки
+                resultElement.querySelector('a').addEventListener('click', function(e) {
+                    logDebug(`Клик по ссылке: ${yandexLink}`);
+                });
+                
+                resultsDiv.appendChild(resultElement);
+            });
+        }
 
-        // Поиск при нажатии Enter
-        document.getElementById('search').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') search();
-        });
+        // 6. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+        function getYandexLink(path) {
+            return `https://disk.yandex.ru/d/${PUBLIC_FOLDER_ID}?path=%2F${encodeURIComponent(path)}`;
+        }
+        
+        function highlightQuery(text, query) {
+            return text.replace(new RegExp(query, 'gi'), match => 
+                `<span class="articul-highlight">${match}</span>`
+            );
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            debugEl.innerHTML = '';
+        }
+        
+        function showNoResults(query) {
+            document.getElementById('results').innerHTML = `
+                <div class="no-results">
+                    Артикул "${query}" не найден...
+                </div>`;
+        }
+        
+        function showError(message) {
+            document.getElementById('results').innerHTML = `
+                <div class="no-results error">
+                    ⚠️ ${message}
+                </div>`;
+        }
 
-        // Первый поиск при загрузке (если есть артикул в URL)
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const articul = urlParams.get('articul');
-            if (articul) {
-                document.getElementById('search').value = articul;
-                search();
-            }
+        // 7. ИНИЦИАЛИЗАЦИЯ
+        document.addEventListener('DOMContentLoaded', () => {
+            logDebug("Страница загружена");
+            document.getElementById('search').focus();
+            
+            // Обработчики событий
+            document.getElementById('search').addEventListener('input', () => {
+                clearTimeout(window.searchTimeout);
+                window.searchTimeout = setTimeout(search, 300);
+            });
+            
+            document.getElementById('search').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') search();
+            });
         });
     </script>
 </body>
