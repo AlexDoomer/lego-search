@@ -82,6 +82,11 @@
             color: #27ae60;
             margin-right: 5px;
         }
+        .articul-list {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -96,7 +101,7 @@
         </label>
     </div>
     
-    <input type="text" id="search" placeholder="Введите артикул (например: 999)" autofocus>
+    <input type="text" id="search" placeholder="Введите артикул (например: 11091)" autofocus>
     <div id="results"></div>
 
     <script>
@@ -122,7 +127,12 @@
             return `https://disk.yandex.ru/d/${PUBLIC_FOLDER_ID}/${encodedPath}`;
         }
 
-        // Поиск по названиям папок (полная версия)
+        // Извлечение всех артикулов из названия (для отображения)
+        function extractDisplayArticuls(name) {
+            return name.match(/([a-zA-Z]*\d+[a-zA-Z]*)/g) || [];
+        }
+
+        // Поиск по названиям папок
         async function searchByName(query) {
             const index = await loadIndex();
             const queryLower = query.toLowerCase();
@@ -140,25 +150,6 @@
                                 path: path,
                                 name: folder.name,
                                 isArticul: false
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Добавляем папки с артикулами (для подсветки)
-            for (const articul in index) {
-                if (articul === "_all_folders") continue;
-                
-                for (const item of index[articul]) {
-                    if (item.name.toLowerCase().includes(queryLower)) {
-                        const path = item.path;
-                        if (!addedPaths.has(path)) {
-                            addedPaths.add(path);
-                            results.push({
-                                path: path,
-                                name: item.name,
-                                isArticul: true
                             });
                         }
                     }
@@ -198,6 +189,12 @@
                     match => `<span class="articul-highlight">${match}</span>`
                 );
                 
+                // Извлекаем все артикулы для отображения
+                const articuls = extractDisplayArticuls(item.name);
+                const articulsHtml = articuls.length > 0 
+                    ? `<div class="articul-list">Артикулы: ${articuls.join(', ')}</div>` 
+                    : '';
+                
                 html += `
                     <div class="item">
                         <h3>
@@ -205,6 +202,7 @@
                             ${highlightedName}
                         </h3>
                         <p>Путь: ${item.path.replace(/\//g, ' / ')}</p>
+                        ${articulsHtml}
                         <a href="${yandexLink}" target="_blank">Открыть папку</a>
                     </div>
                 `;
@@ -249,7 +247,7 @@
         document.querySelectorAll('input[name="searchType"]').forEach(radio => {
             radio.addEventListener('change', () => {
                 const placeholder = radio.value === 'articul' 
-                    ? "Введите артикул (например: 999)" 
+                    ? "Введите артикул (например: 11091)" 
                     : "Введите название папки";
                 document.getElementById('search').placeholder = placeholder;
                 document.getElementById('search').focus();
