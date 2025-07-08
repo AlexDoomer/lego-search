@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск деталей Lego</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #e74c3c;
+            text-align: center;
+        }
+        #search {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #3498db;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-top: 10px;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.3s;
+        }
+        .item:hover {
+            background-color: #f9f9f9;
+        }
+        .item h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .item a {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 15px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .item a:hover {
+            background-color: #2980b9;
+        }
+        .no-results {
+            color: #7f8c8d;
+            text-align: center;
+            padding: 20px;
+        }
+        .articul-highlight {
+            background-color: #fffde7;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .search-type {
+            display: flex;
+            margin-bottom: 10px;
+            gap: 15px;
+        }
+        .search-type label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        .results-count {
+            margin-bottom: 10px;
+            color: #7f8c8d;
+        }
+        .folder-icon {
+            color: #27ae60;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Поиск деталей Lego</h1>
+    
+    <div class="search-type">
+        <label>
+            <input type="radio" name="searchType" value="articul" checked> По артикулу
+        </label>
+        <label>
+            <input type="radio" name="searchType" value="name"> По названию
+        </label>
+    </div>
+    
+    <input type="text" id="search" placeholder="Введите артикул (например: 999)" autofocus>
+    <div id="results"></div>
+
+    <script>
+        // Конфигурация
+        const PUBLIC_FOLDER_ID = "Wj1vKh7Xc0zUVA";
+        
+        // Загрузка индекса
+        async function loadIndex() {
+            try {
+                const response = await fetch('lego_index_full.json');
+                return await response.json();
+            } catch (error) {
+                console.error("Ошибка загрузки индекса:", error);
+                return {};
+            }
+        }
+
+        // Формирование ссылки на Яндекс.Диск
+        function getYandexLink(path) {
+            const encodedPath = path.split('/')
+                .map(part => encodeURIComponent(part))
+                .join('/');
+            return `https://disk.yandex.ru/d/${PUBLIC_FOLDER_ID}/${encodedPath}`;
+        }
+
+        // Поиск по названиям папок (полная версия)
+        async function searchByName(query) {
+            const index = await loadIndex();
+            const queryLower = query.toLowerCase();
+            const results = [];
+            const addedPaths = new Set();
+
+            // Ищем во всех папках
+            if (index._all_folders) {
+                for (const folder of index._all_folders) {
+                    if (folder.name.toLowerCase().includes(queryLower)) {
+                        const path = folder.path;
+                        if (!addedPaths.has(path)) {
+                            addedPaths.add(path);
+                            results.push({
+                                path: path,
+                                name: folder.name,
+                                isArticul: false
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Добавляем папки с артикулами (для подсветки)
+            for (const articul in index) {
+                if (articul === "_all_folders") continue;
+                
+                for (const item of index[articul]) {
+                    if (item.name.toLowerCase().includes(queryLower)) {
+                        const path = item.path;
+                        if (!addedPaths.has(path)) {
+                            addedPaths.add(path);
+                            results.push({
+                                path: path,
+                                name: item.name,
+                                isArticul: true
+                            });
+                        }
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        // Отображение результатов
+        function displayResults(results, query) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            if (results.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="no-results">
+                        По запросу "${query}" ничего не найдено.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Сортировка по названию
+            results.sort((a, b) => a.name.localeCompare(b.name));
+            
+            let html = `
+                <div class="results-count">
+                    Найдено: ${results.length} ${results.length === 1 ? 'результат' : results.length < 5 ? 'результата' : 'результатов'}
+                </div>
+            `;
+            
+            results.forEach(item => {
+                const yandexLink = getYandexLink(item.path);
+                const highlightedName = item.name.replace(
+                    new RegExp(query, 'gi'), 
+                    match => `<span class="articul-highlight">${match}</span>`
+                );
+                
+                html += `
+                    <div class="item">
+                        <h3>
+                            <span class="folder-icon">${item.isArticul ? '🔹' : '📁'}</span>
+                            ${highlightedName}
+                        </h3>
+                        <p>Путь: ${item.path.replace(/\//g, ' / ')}</p>
+                        <a href="${yandexLink}" target="_blank">Открыть папку</a>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        // Основная функция поиска
+        async function search() {
+            const query = document.getElementById('search').value.trim();
+            if (!query) {
+                document.getElementById('results').innerHTML = '';
+                return;
+            }
+
+            const searchType = document.querySelector('input[name="searchType"]:checked').value;
+            let results = [];
+            
+            if (searchType === 'articul') {
+                const index = await loadIndex();
+                results = index[query] || [];
+            } else {
+                results = await searchByName(query);
+            }
+
+            displayResults(results, query);
+        }
+
+        // Обработчики событий
+        let searchTimeout;
+        document.getElementById('search').addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(search, 300);
+        });
+
+        document.getElementById('search').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') search();
+        });
+
+        // Переключатель типа поиска
+        document.querySelectorAll('input[name="searchType"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const placeholder = radio.value === 'articul' 
+                    ? "Введите артикул (например: 999)" 
+                    : "Введите название папки";
+                document.getElementById('search').placeholder = placeholder;
+                document.getElementById('search').focus();
+            });
+        });
+
+        // Инициализация
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const articul = urlParams.get('articul');
+            if (articul) {
+                document.getElementById('search').value = articul;
+                search();
+            }
+        });
+    </script>
+</body>
+</html>
