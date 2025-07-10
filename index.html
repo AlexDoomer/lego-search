@@ -347,7 +347,8 @@
             
             if (searchType === 'articul') {
                 const index = await loadIndex();
-                results = index[query] || [];
+                // Точное совпадение для режима поиска по артикулам
+                results = index[query] ? [...index[query]] : [];
             } else {
                 results = await searchByName(query);
             }
